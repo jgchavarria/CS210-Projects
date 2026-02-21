@@ -1,90 +1,134 @@
 /*
  * Jorge Chavarria
- * CS 210 Project Three - Corner Grocer Item Tracker (Class Implementation)
+ * CS 210 Project Three - Corner Grocer Item Tracker
  *
- * Grocery class handles:
- *  - Displaying the menu
- *  - Opening input/output files safely
- *  - Reading the input file into an ordered map<string,int>
- *  - Writing the backup file frequency.dat
- *  - Printing item frequencies and histogram output
+ * Requirements met:
+ *  - Uses a class with public/private structure (Grocery)
+ *  - Uses ordered map<string,int>
+ *  - Reads CS210_Project_Three_Input_File.txt
+ *  - Writes frequency.dat at program start
+ *  - Menu options 1-4 with input validation
+ *  - Uses while(condition) loop (not while(true))
+ *  - Uses getline for file input (supports multi-word items)
  */
 
 #include "grocery.h"
 
-void Grocery::displayMenu() {
-    cout << "======================================" << endl;
-    cout << "        Corner Grocer - Menu          " << endl;
-    cout << "======================================" << endl;
-    cout << "1. Find item frequency" << endl;
-    cout << "2. Print all item frequencies" << endl;
-    cout << "3. Print histogram" << endl;
-    cout << "4. Exit" << endl;
-    cout << "--------------------------------------" << endl;
-}
+int getInteger(int lowest, int highest, string prompt);
+void pauseProgram(string prompt = "Press enter to continue ");
+void cls();
 
-bool Grocery::openInputFile(ifstream& inFile, const string& fileName) {
-    inFile.open(fileName);
-    return inFile.is_open();
-}
+const string INPUT_FILE = "CS210_Project_Three_Input_File.txt";
+const string OUTPUT_FILE = "frequency.dat";
 
-bool Grocery::openOutputFile(ofstream& outFile, const string& fileName) {
-    outFile.open(fileName);
-    return outFile.is_open();
-}
+int main() {
+    Grocery grocery;
 
-map<string, int> Grocery::readInputFile(ifstream& inFile) {
-    map<string, int> grocList;   // Ordered map for item frequencies
-    string item = "";            // Stores each line/item from the file
+    ifstream inputFile;          // Reads daily purchases
+    ofstream outputFile;         // Writes backup file
+    map<string, int> grocList;   // Ordered grocery frequency map
+    int selection = 0;           // Menu selection
 
-    // Read line-by-line using getline (supports multi-word items)
-    while (getline(inFile, item)) {
-        if (!item.empty()) {
-            grocList[item]++;    // map initializes new int values to 0 automatically
+    // Open input file
+    if (!grocery.openInputFile(inputFile, INPUT_FILE)) {
+        cerr << "Error: Could not open input file: " << INPUT_FILE << endl;
+        return EXIT_FAILURE;
+    }
+
+    // Open output file (created at program start)
+    if (!grocery.openOutputFile(outputFile, OUTPUT_FILE)) {
+        cerr << "Error: Could not open output file: " << OUTPUT_FILE << endl;
+        return EXIT_FAILURE;
+    }
+
+    // Build frequency map from input file
+    grocList = grocery.readInputFile(inputFile);
+
+    // Write backup file
+    grocery.writeOutputFile(outputFile, grocList);
+
+    // Close files
+    inputFile.close();
+    outputFile.close();
+
+    // Menu loop (condition-based)
+    do {
+        grocery.displayMenu();
+        selection = getInteger(1, 4, "Please select menu option ");
+
+        switch (selection) {
+        case 1:
+            cls();
+            // Clear leftover newline before getline inside findItem
+            cin.clear();
+            cin.ignore(numeric_limits<streamsize>::max(), '\n');
+            grocery.findItem(grocList);
+            pauseProgram();
+            cls();
+            break;
+
+        case 2:
+            cls();
+            grocery.listItems(grocList);
+            pauseProgram();
+            cls();
+            break;
+
+        case 3:
+            cls();
+            grocery.printHistogram(grocList);
+            pauseProgram();
+            cls();
+            break;
+
+        case 4:
+            break;
+
+        default:
+            cout << "Invalid selection." << endl;
+            break;
         }
-    }
+    } while (selection != 4);
 
-    return grocList;
+    cout << "Goodbye!" << endl;
+    return 0;
 }
 
-void Grocery::writeOutputFile(ofstream& outFile, const map<string, int>& grocList) {
-    // Write each item and its frequency to the backup file
-    for (const auto& pair : grocList) {
-        outFile << pair.first << " " << pair.second << endl;
-    }
+int getInteger(int lowest, int highest, string prompt) {
+    int number = 0;
+    bool needNumber = true;
+
+    prompt = prompt + to_string(lowest) + " and " + to_string(highest) + ": ";
+
+    do {
+        cout << prompt;
+        cin >> number;
+
+        if (cin.fail()) {
+            cout << "Must be a number." << endl;
+            cin.clear();
+            cin.ignore(MAX_INTEGER, '\n');
+            continue;
+        }
+
+        needNumber = (number < lowest) || (number > highest);
+        if (needNumber) {
+            cout << "Invalid number - please enter a value between "
+                 << lowest << " and " << highest << "." << endl;
+        }
+
+    } while (needNumber);
+
+    return number;
 }
 
-void Grocery::findItem(const map<string, int>& grocList) {
-    string searchItem = "";      // Item to search for
-    int count = 0;               // Frequency result
-
-    cout << "Enter the item you would like to search for: ";
-    getline(cin, searchItem);
-
-    auto it = grocList.find(searchItem);
-    if (it != grocList.end()) {
-        count = it->second;
-    } else {
-        count = 0;
-    }
-
-    cout << searchItem << " was purchased " << count << " time(s)." << endl;
+void pauseProgram(string prompt) {
+    cin.ignore(numeric_limits<streamsize>::max(), '\n');
+    cout << prompt;
+    cin.get();
 }
 
-void Grocery::listItems(const map<string, int>& grocList) {
-    cout << "Item Frequencies" << endl;
-    cout << "----------------" << endl;
-
-    for (const auto& pair : grocList) {
-        cout << pair.first << " " << pair.second << endl;
-    }
-}
-
-void Grocery::printHistogram(const map<string, int>& grocList) {
-    cout << "Histogram" << endl;
-    cout << "---------" << endl;
-
-    for (const auto& pair : grocList) {
-        cout << pair.first << " " << string(pair.second, '*') << endl;
-    }
+void cls() {
+    cout << "\x1B[2J\x1B[H";
+    cout.flush();
 }

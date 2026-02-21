@@ -58,6 +58,8 @@ void Grocery::findItem(const map<string, int>& grocList) {
     string searchItem = "";      // Item to search for
     int count = 0;               // Frequency result
 
+    // Safe for mixing cin >> and getline
+    cin.clear();
     cout << "Enter the item you would like to search for: ";
     getline(cin, searchItem);
 
